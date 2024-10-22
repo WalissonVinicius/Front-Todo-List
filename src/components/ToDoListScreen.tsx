@@ -8,7 +8,7 @@ import {
     View,
     Modal,
 } from 'react-native';
-import { Ionicons, FontAwesome } from '@expo/vector-icons'; // Ícones adicionais
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
 
 interface Task {
     title: string;
@@ -19,10 +19,16 @@ const ToDoListScreen: React.FC = () => {
     const [title, setTitle] = useState<string>('');
     const [about, setAbout] = useState<string>('');
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [activeTaskIndex, setActiveTaskIndex] = useState<number | null>(null); // Controla tarefa ativa
-    const [isShareMenuVisible, setIsShareMenuVisible] = useState<boolean>(false); // Controla menu global de compartilhamento
-    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false); // Controla o modal de exclusão
-    const [taskToDelete, setTaskToDelete] = useState<number | null>(null); // Índice da tarefa a ser deletada
+    const [activeTaskIndex, setActiveTaskIndex] = useState<number | null>(null);
+    const [isShareMenuVisible, setIsShareMenuVisible] = useState<boolean>(false);
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false);
+    const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
+
+    // Estados para o modal de edição
+    const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
+    const [editTaskTitle, setEditTaskTitle] = useState<string>('');
+    const [editTaskAbout, setEditTaskAbout] = useState<string>('');
+    const [taskToEdit, setTaskToEdit] = useState<number | null>(null);
 
     // Função para adicionar tarefas
     const handleAddTask = (): void => {
@@ -38,14 +44,33 @@ const ToDoListScreen: React.FC = () => {
         if (taskToDelete !== null) {
             const updatedTasks = tasks.filter((_, i) => i !== taskToDelete);
             setTasks(updatedTasks);
-            setIsDeleteModalVisible(false); // Fechar o modal após deletar
+            setIsDeleteModalVisible(false);
         }
     };
 
     // Abrir modal para confirmar a exclusão
     const handleRemoveTask = (index: number): void => {
         setTaskToDelete(index);
-        setIsDeleteModalVisible(true); // Exibir o modal de confirmação
+        setIsDeleteModalVisible(true);
+    };
+
+    // Abrir modal de edição
+    const handleEditTask = (index: number): void => {
+        const task = tasks[index];
+        setEditTaskTitle(task.title);
+        setEditTaskAbout(task.about);
+        setTaskToEdit(index);
+        setIsEditModalVisible(true);
+    };
+
+    // Função para salvar a edição da tarefa
+    const handleSaveEditedTask = (): void => {
+        if (taskToEdit !== null) {
+            const updatedTasks = [...tasks];
+            updatedTasks[taskToEdit] = { title: editTaskTitle, about: editTaskAbout };
+            setTasks(updatedTasks);
+            setIsEditModalVisible(false);
+        }
     };
 
     // Alternar tarefa ativa
@@ -129,7 +154,7 @@ const ToDoListScreen: React.FC = () => {
                                             style={styles.icon}
                                         />
                                     </TouchableOpacity>
-                                    <TouchableOpacity>
+                                    <TouchableOpacity onPress={() => handleEditTask(index)}>
                                         <Ionicons
                                             name="create"
                                             size={24}
@@ -165,7 +190,49 @@ const ToDoListScreen: React.FC = () => {
                                 style={styles.modalButton}
                                 onPress={() => setIsDeleteModalVisible(false)}
                             >
-                                <Text style={styles.modalButtonText}>No</Text>
+                                <Text style={styles.modalButtonText}>No </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal de edição de tarefas */}
+            <Modal
+                visible={isEditModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setIsEditModalVisible(false)}
+            >
+                <View style={styles.modalBackground}>
+                    <View style={styles.editModalContainer}>
+                        <Text style={styles.editModalTitle}>Edit Task </Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Edit Title..."
+                            placeholderTextColor="#F0E3CA"
+                            value={editTaskTitle}
+                            onChangeText={setEditTaskTitle}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Edit About..."
+                            placeholderTextColor="#F0E3CA"
+                            value={editTaskAbout}
+                            onChangeText={setEditTaskAbout}
+                        />
+                        <View style={styles.modalButtonContainer}>
+                            <TouchableOpacity
+                                style={styles.modalButton}
+                                onPress={handleSaveEditedTask}
+                            >
+                                <Text style={styles.modalButtonText}>Save </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.modalButton}
+                                onPress={() => setIsEditModalVisible(false)}
+                            >
+                                <Text style={styles.modalButtonText}>Cancel </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -354,6 +421,27 @@ const styles = StyleSheet.create({
     modalButtonText: {
         color: '#FF8303',
         fontSize: 16,
+    },
+    editModalContainer: {
+        width: '90%',
+        backgroundColor: '#353535',
+        borderRadius: 10,
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.8,
+        shadowRadius: 2,
+        elevation: 5,
+    },
+    editModalTitle: {
+        fontSize: 18,
+        color: '#F0E3CA',
+        marginBottom: 10,
     },
 });
 
