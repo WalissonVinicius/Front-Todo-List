@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -11,9 +11,12 @@ import {
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 
 interface Task {
+    id: number;
     title: string;
     about: string;
 }
+
+const API_URL = 'http://192.168.0.202:3000';
 
 const ToDoListScreen: React.FC = () => {
     const [title, setTitle] = useState<string>('');
@@ -30,47 +33,102 @@ const ToDoListScreen: React.FC = () => {
     const [editTaskAbout, setEditTaskAbout] = useState<string>('');
     const [taskToEdit, setTaskToEdit] = useState<number | null>(null);
 
+    // Função para buscar tarefas da API
+    const fetchTasks = async (): Promise<void> => {
+        try {
+            const response = await fetch(`${API_URL}/tasks`);
+            const data = await response.json();
+            setTasks(data); // Atualiza o estado com as tarefas
+        } catch (error) {
+            console.error('Erro ao buscar tarefas:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchTasks(); // Carregar tarefas ao montar o componente
+    }, []);
+
     // Função para adicionar tarefas
-    const handleAddTask = (): void => {
+    const handleAddTask = async (): Promise<void> => {
         if (title && about) {
-            setTasks([...tasks, { title, about }]);
-            setTitle('');
-            setAbout('');
+            try {
+                const response = await fetch(`${API_URL}/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title, about }),
+                });
+
+                if (response.ok) {
+                    const newTask = await response.json();
+                    setTasks([...tasks, newTask]); // Atualiza a lista de tarefas
+                    setTitle('');
+                    setAbout('');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar tarefa:', error);
+            }
         }
     };
 
     // Função para remover tarefas
-    const handleConfirmDeleteTask = (): void => {
+    const handleConfirmDeleteTask = async (): Promise<void> => {
         if (taskToDelete !== null) {
-            const updatedTasks = tasks.filter((_, i) => i !== taskToDelete);
-            setTasks(updatedTasks);
-            setIsDeleteModalVisible(false);
+            try {
+                const response = await fetch(`${API_URL}/tasks/${taskToDelete}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    const updatedTasks = tasks.filter(task => task.id !== taskToDelete);
+                    setTasks(updatedTasks); // Remove a tarefa do estado
+                    setIsDeleteModalVisible(false);
+                }
+            } catch (error) {
+                console.error('Erro ao deletar tarefa:', error);
+            }
+        }
+    };
+
+    // Função para salvar a edição da tarefa
+    const handleSaveEditedTask = async (): Promise<void> => {
+        if (taskToEdit !== null) {
+            try {
+                const response = await fetch(`${API_URL}/tasks/${taskToEdit}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title: editTaskTitle, about: editTaskAbout }),
+                });
+
+                if (response.ok) {
+                    const updatedTask = await response.json();
+                    const updatedTasks = tasks.map(task =>
+                        task.id === taskToEdit ? updatedTask : task
+                    );
+                    setTasks(updatedTasks); // Atualiza o estado com a tarefa editada
+                    setIsEditModalVisible(false);
+                }
+            } catch (error) {
+                console.error('Erro ao editar tarefa:', error);
+            }
         }
     };
 
     // Abrir modal para confirmar a exclusão
-    const handleRemoveTask = (index: number): void => {
-        setTaskToDelete(index);
+    const handleRemoveTask = (id: number): void => {
+        setTaskToDelete(id);
         setIsDeleteModalVisible(true);
     };
 
     // Abrir modal de edição
-    const handleEditTask = (index: number): void => {
-        const task = tasks[index];
+    const handleEditTask = (task: Task): void => {
         setEditTaskTitle(task.title);
         setEditTaskAbout(task.about);
-        setTaskToEdit(index);
+        setTaskToEdit(task.id);
         setIsEditModalVisible(true);
-    };
-
-    // Função para salvar a edição da tarefa
-    const handleSaveEditedTask = (): void => {
-        if (taskToEdit !== null) {
-            const updatedTasks = [...tasks];
-            updatedTasks[taskToEdit] = { title: editTaskTitle, about: editTaskAbout };
-            setTasks(updatedTasks);
-            setIsEditModalVisible(false);
-        }
     };
 
     // Alternar tarefa ativa
@@ -118,7 +176,7 @@ const ToDoListScreen: React.FC = () => {
                     </View>
                 ) : (
                     tasks.map((task, index) => (
-                        <View key={index} style={styles.taskItem}>
+                        <View key={task.id} style={styles.taskItem}>
                             <TouchableOpacity
                                 style={styles.taskContent}
                                 onPress={() => handleToggleTask(index)}
@@ -129,7 +187,7 @@ const ToDoListScreen: React.FC = () => {
                                 </View>
                                 <TouchableOpacity
                                     style={styles.removeButton}
-                                    onPress={() => handleRemoveTask(index)}
+                                    onPress={() => handleRemoveTask(task.id)}
                                 >
                                     <Text style={styles.removeButtonText}>X</Text>
                                 </TouchableOpacity>
@@ -154,7 +212,7 @@ const ToDoListScreen: React.FC = () => {
                                             style={styles.icon}
                                         />
                                     </TouchableOpacity>
-                                    <TouchableOpacity onPress={() => handleEditTask(index)}>
+                                    <TouchableOpacity onPress={() => handleEditTask(task)}>
                                         <Ionicons
                                             name="create"
                                             size={24}
@@ -221,44 +279,21 @@ const ToDoListScreen: React.FC = () => {
                             value={editTaskAbout}
                             onChangeText={setEditTaskAbout}
                         />
-                        <View style={styles.modalButtonContainer}>
-                            <TouchableOpacity
-                                style={styles.modalButton}
-                                onPress={handleSaveEditedTask}
-                            >
-                                <Text style={styles.modalButtonText}>Save </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.modalButton}
-                                onPress={() => setIsEditModalVisible(false)}
-                            >
-                                <Text style={styles.modalButtonText}>Cancel </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={handleSaveEditedTask}
+                        >
+                            <Text style={styles.modalButtonText}>Save </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={() => setIsEditModalVisible(false)}
+                        >
+                            <Text style={styles.modalButtonText}>Cancel </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
-
-            {/* Menu de compartilhamento no final da tela */}
-            {isShareMenuVisible && (
-                <View style={styles.shareMenu}>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <Ionicons name="copy" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="vk" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="telegram" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="whatsapp" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="facebook" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                </View>
-            )}
         </View>
     );
 };
