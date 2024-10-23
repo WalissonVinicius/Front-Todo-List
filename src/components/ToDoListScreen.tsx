@@ -294,10 +294,29 @@ const ToDoListScreen: React.FC = () => {
                     </View>
                 </View>
             </Modal>
+            {/* Menu de compartilhamento no final da tela */}
+            {isShareMenuVisible && (
+                <View style={styles.shareMenu}>
+                    <TouchableOpacity style={styles.shareIcon}>
+                        <Ionicons name="copy" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.shareIcon}>
+                        <FontAwesome name="vk" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.shareIcon}>
+                        <FontAwesome name="telegram" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.shareIcon}>
+                        <FontAwesome name="whatsapp" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.shareIcon}>
+                        <FontAwesome name="facebook" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 };
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
