@@ -27,11 +27,27 @@ const ToDoListScreen: React.FC = () => {
     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false);
     const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
 
+    const [isInfoModalVisible, setIsInfoModalVisible] = useState<boolean>(false);
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+    // Função para abrir o modal de detalhes
+    const handleShowTaskInfo = (task: Task): void => {
+        setSelectedTask(task);
+        setIsInfoModalVisible(true);
+    };
+
+    // Função para fechar o modal de detalhes
+    const handleCloseTaskInfo = (): void => {
+        setIsInfoModalVisible(false);
+        setSelectedTask(null);
+    };
+
     // Estados para o modal de edição
     const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
     const [editTaskTitle, setEditTaskTitle] = useState<string>('');
     const [editTaskAbout, setEditTaskAbout] = useState<string>('');
     const [taskToEdit, setTaskToEdit] = useState<number | null>(null);
+    const [infoTask, setInfoTask] = useState<Task | null>(null);
 
     // Função para buscar tarefas da API
     const fetchTasks = async (): Promise<void> => {
@@ -45,7 +61,25 @@ const ToDoListScreen: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchTasks(); // Carregar tarefas ao montar o componente
+        fetchTasks();
+    }, []);
+
+    const handleShowInfo = (task: Task): void => {
+        setInfoTask(task); // Define a tarefa ativa
+        setIsInfoModalVisible(true); // Exibe o modal
+    };
+
+    const handleCloseInfoModal = (): void => {
+        setIsInfoModalVisible(false); // Fecha o modal
+        setInfoTask(null); // Limpa a tarefa ativa
+    };
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchTasks(); // Busca as tarefas a cada 5 segundos
+        }, 5000); // 5000ms = 5 segundos
+
+        return () => clearInterval(interval); // Limpa o intervalo ao desmontar o componente
     }, []);
 
     // Função para adicionar tarefas
@@ -204,7 +238,7 @@ const ToDoListScreen: React.FC = () => {
                                             style={styles.icon}
                                         />
                                     </TouchableOpacity>
-                                    <TouchableOpacity>
+                                    <TouchableOpacity onPress={() => handleShowTaskInfo(task)}>
                                         <Ionicons
                                             name="information-circle"
                                             size={24}
@@ -235,20 +269,20 @@ const ToDoListScreen: React.FC = () => {
                 onRequestClose={() => setIsDeleteModalVisible(false)}
             >
                 <View style={styles.modalBackground}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalText}>Delete this task? </Text>
+                    <View style={styles.deleteModalContainer}>
+                        <Text style={styles.deleteModalText}>Delete this task? </Text>
                         <View style={styles.modalButtonContainer}>
                             <TouchableOpacity
-                                style={styles.modalButton}
+                                style={[styles.modalButton, { backgroundColor: '#5A5A5A' }]}
+                                onPress={() => setIsDeleteModalVisible(false)}
+                            >
+                                <Text style={styles.modalButtonText}>No</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, { backgroundColor: '#FF8303' }]}
                                 onPress={handleConfirmDeleteTask}
                             >
                                 <Text style={styles.modalButtonText}>Yes </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.modalButton}
-                                onPress={() => setIsDeleteModalVisible(false)}
-                            >
-                                <Text style={styles.modalButtonText}>No </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -259,64 +293,107 @@ const ToDoListScreen: React.FC = () => {
             <Modal
                 visible={isEditModalVisible}
                 transparent={true}
-                animationType="slide"
+                animationType="fade"
                 onRequestClose={() => setIsEditModalVisible(false)}
             >
                 <View style={styles.modalBackground}>
                     <View style={styles.editModalContainer}>
-                        <Text style={styles.editModalTitle}>Edit Task </Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Edit Title..."
-                            placeholderTextColor="#F0E3CA"
-                            value={editTaskTitle}
-                            onChangeText={setEditTaskTitle}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Edit About..."
-                            placeholderTextColor="#F0E3CA"
-                            value={editTaskAbout}
-                            onChangeText={setEditTaskAbout}
-                        />
+                        <ScrollView style={{ flex: 1 }}>
+                            <TextInput
+                                style={styles.editModalInput}
+                                placeholder="Title..."
+                                placeholderTextColor="#F0E3CA"
+                                value={editTaskTitle}
+                                onChangeText={setEditTaskTitle}
+                            />
+                            <TextInput
+                                style={[styles.editModalInput, { paddingBottom: 1, minHeight: 10, paddingTop: 10 }]} // Define uma altura mínima e adiciona padding no topo
+                                placeholder="About..."
+                                placeholderTextColor="#F0E3CA"
+                                value={editTaskAbout}
+                                onChangeText={setEditTaskAbout}
+                                multiline={true}
+                                numberOfLines={15}
+                                maxLength={2000}
+                                textAlign='left'
+                                textAlignVertical='top'
+                            />
+                            <View style={styles.modalButtonContainer}>
+                                <TouchableOpacity
+                                    style={[styles.modalButton, { backgroundColor: '#5A5A5A' }]}
+                                    onPress={() => setIsEditModalVisible(false)}
+                                >
+                                    <Text style={styles.modalButtonText}>Cancel </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.modalButton, { backgroundColor: '#FF8303' }]}
+                                    onPress={handleSaveEditedTask}
+                                >
+                                    <Text style={styles.modalButtonText}>Save </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+                    </View>
+                </View >
+            </Modal >
+
+            {/* Modal de Informações */}
+            <Modal
+                visible={isInfoModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={handleCloseTaskInfo}
+            >
+                <View style={styles.modalBackground}>
+                    <View style={styles.infoModalContainer}>
+                        {selectedTask && (
+                            <>
+                                <Text style={styles.infoTitle}>{selectedTask.title}</Text>
+                                <Text style={styles.infoAbout}>{selectedTask.about}</Text>
+                            </>
+                        )}
                         <TouchableOpacity
                             style={styles.modalButton}
-                            onPress={handleSaveEditedTask}
+                            onPress={handleCloseTaskInfo}
                         >
-                            <Text style={styles.modalButtonText}>Save </Text>
+                            <Text style={styles.modalButtonText}>Close</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={styles.modalButton}
-                            onPress={() => setIsEditModalVisible(false)}
+                            style={styles.closeButton}
+                            onPress={handleCloseTaskInfo}
                         >
-                            <Text style={styles.modalButtonText}>Cancel </Text>
+                            <Text style={styles.closeButtonText}>X</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
+
             {/* Menu de compartilhamento no final da tela */}
-            {isShareMenuVisible && (
-                <View style={styles.shareMenu}>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <Ionicons name="copy" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="vk" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="telegram" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="whatsapp" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareIcon}>
-                        <FontAwesome name="facebook" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                </View>
-            )}
-        </View>
+            {
+                isShareMenuVisible && (
+                    <View style={styles.shareMenu}>
+                        <TouchableOpacity style={styles.shareIcon}>
+                            <Ionicons name="copy" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.shareIcon}>
+                            <FontAwesome name="vk" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.shareIcon}>
+                            <FontAwesome name="telegram" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.shareIcon}>
+                            <FontAwesome name="whatsapp" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.shareIcon}>
+                            <FontAwesome name="facebook" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                    </View>
+                )
+            }
+        </View >
     );
 };
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -441,61 +518,90 @@ const styles = StyleSheet.create({
     modalBackground: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
     },
-    modalContainer: {
-        width: 300,
+    editModalContainer: {
         backgroundColor: '#333333',
-        borderRadius: 10,
         padding: 20,
+        marginHorizontal: 20,
+        borderRadius: 10,
+        borderColor: '#FF8303',
+        borderWidth: 1,
+        maxHeight: '60%',
+        flex: 1,
+        marginTop: 300,
+    },
+    editModalInput: {
+        backgroundColor: '#1A1A1A',
+        color: '#FFF',
+        padding: 10,
+        borderRadius: 5,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#FF7F00',
+    },
+    deleteModalContainer: {
+        backgroundColor: '#333333',
+        padding: 20,
+        marginHorizontal: 20,
+        borderRadius: 10,
+        borderColor: '#FF8303',
+        borderWidth: 1,
         alignItems: 'center',
     },
-    modalText: {
-        color: '#FFFFFF',
+    deleteModalText: {
+        color: '#FFF',
         fontSize: 18,
         marginBottom: 20,
     },
     modalButtonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        width: '100%',
     },
     modalButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: '#FF8303',
+        flex: 1,
         padding: 10,
         borderRadius: 5,
-        width: '35%',
+        marginHorizontal: 5,
         justifyContent: 'center',
         alignItems: 'center',
-        marginHorizontal: 20,
     },
     modalButtonText: {
-        color: '#FF8303',
+        color: '#FFF',
         fontSize: 16,
     },
-    editModalContainer: {
-        width: '90%',
-        backgroundColor: '#353535',
-        borderRadius: 10,
+    infoModalContainer: {
+        backgroundColor: '#333333',
         padding: 20,
+        marginHorizontal: 20,
+        borderRadius: 10,
+        borderColor: '#FF8303',
+        borderWidth: 1,
         alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.8,
-        shadowRadius: 2,
-        elevation: 5,
     },
-    editModalTitle: {
-        fontSize: 18,
-        color: '#F0E3CA',
+    infoTitle: {
+        color: '#FFFFFF',
+        fontSize: 24,
         marginBottom: 10,
+    },
+    infoAbout: {
+        color: '#AAAAAA',
+        fontSize: 16,
+        marginBottom: 20,
+    },
+    closeButton: {
+        backgroundColor: '#2B2A27',
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 5,
+        borderColor: '#A35709',
+        borderWidth: 3,
+    },
+    closeButtonText: {
+        color: '#FF8303',
+        fontSize: 18,
     },
 });
 
