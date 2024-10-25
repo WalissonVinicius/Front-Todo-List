@@ -82,4 +82,10 @@ Sinta-se à vontade para contribuir com este projeto! Para isso:
 4. Envie para o branch principal (`git push origin feature/nova-feature`).
 5. Crie um Pull Request.
 
+## Contato
+
+- Autor - Walisson Vinicius
+- Website - https://walissonportfolio.vercel.app/
+- Instagra, - [@wv_sccp](https://www.instagram.com/wv.sccp/)
+
 ---
